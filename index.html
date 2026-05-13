@@ -137,12 +137,123 @@
   .glyph {
     position: absolute; inset: 0; margin: auto;
     width: 100%; height: 100%;
+    overflow: visible; /* let the heartbeat halo bleed past the viewBox */
     animation: pulse 6s ease-in-out infinite;
-    filter: drop-shadow(0 0 24px rgba(0,230,195,.35));
   }
+  /* The mandala's own ambient glow — implemented as a soft SVG circle inside
+     the glyph instead of a CSS drop-shadow, so it can never clip to a square. */
   @keyframes pulse {
     0%, 100% { transform: scale(1);    opacity: 1;   }
     50%      { transform: scale(1.03); opacity: .92; }
+  }
+
+  /* Glitch pulse on the core — staccato RGB-split + jitter that fires irregularly */
+  .core-group {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: coreGlitch 5.4s step-end infinite;
+  }
+
+  /* Heartbeat — slow, menacing lub-DUB at ~33 bpm */
+  .heart {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: coreHeartbeat 1.8s cubic-bezier(.3,.0,.15,1) infinite;
+  }
+  @keyframes coreHeartbeat {
+    /* long rest */
+    0%   { transform: scale(1); }
+    /* lub — sharp, small contraction */
+    5%   { transform: scale(1.10); }
+    11%  { transform: scale(1); }
+    /* brief held silence */
+    16%  { transform: scale(.97); }
+    /* DUB — bigger, visceral expansion */
+    22%  { transform: scale(1.28); }
+    34%  { transform: scale(1); }
+    /* long ominous silence to 100% */
+    100% { transform: scale(1); }
+  }
+
+  /* Halo — real SVG radial-gradient circle, expands/brightens with each beat.
+     Lives inside .heart so it pulses with the beat without filter-region clipping. */
+  .halo {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: coreHalo 1.8s cubic-bezier(.3,.0,.15,1) infinite;
+    opacity: .55;
+  }
+  @keyframes coreHalo {
+    0%   { opacity: .45; transform: scale(.95); }
+    5%   { opacity: .85; transform: scale(1.20); }
+    11%  { opacity: .45; transform: scale(.95); }
+    16%  { opacity: .35; transform: scale(.90); }
+    22%  { opacity: 1;   transform: scale(1.55); }
+    34%  { opacity: .45; transform: scale(.95); }
+    100% { opacity: .45; transform: scale(.95); }
+  }
+  .core-group .flash {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: coreFlash 5.4s step-end infinite;
+  }
+  /* Scanline tear that races across the core during the glitch */
+  .core-group .tear {
+    opacity: 0;
+    animation: coreTear 5.4s step-end infinite;
+  }
+
+  @keyframes coreGlitch {
+    0%, 82% {
+      transform: translate(0,0) skew(0);
+      filter: none;
+    }
+    83% {
+      transform: translate(-3px, 2px);
+      filter: drop-shadow(3px 0 0 #ff3b6b) drop-shadow(-3px 0 0 #00e6c3);
+    }
+    85% {
+      transform: translate(4px, -1px) skewX(-6deg);
+      filter: drop-shadow(-4px 0 0 #ff3b6b) drop-shadow(4px 0 0 #6e8bff);
+    }
+    86% {
+      transform: translate(-2px, -3px) scale(1.08);
+      filter: none;
+    }
+    88% {
+      transform: translate(3px, 1px) skewY(3deg);
+      filter: drop-shadow(-3px 0 0 #ff7ad9) drop-shadow(3px 0 0 #00e6c3);
+    }
+    89% {
+      transform: translate(-1px, 2px) scale(0.94);
+      filter: drop-shadow(2px -1px 0 #6e8bff) drop-shadow(-2px 1px 0 #ff3b6b);
+    }
+    91% {
+      transform: translate(2px, 0);
+      filter: none;
+    }
+    92%, 100% {
+      transform: translate(0,0);
+      filter: none;
+    }
+  }
+
+  @keyframes coreFlash {
+    0%, 85%        { opacity: 0; }
+    86%            { opacity: 1;   transform: scale(1.6); }
+    87%            { opacity: 0; }
+    90%            { opacity: .8;  transform: scale(1.2); }
+    91%, 100%      { opacity: 0; }
+  }
+
+  @keyframes coreTear {
+    0%, 84%   { opacity: 0; transform: translateY(-20px) scaleY(1); }
+    85%       { opacity: .9; transform: translateY(-12px) scaleY(1); }
+    86%       { opacity: .7; transform: translateY(0)     scaleY(.4); }
+    88%       { opacity: .9; transform: translateY(8px)   scaleY(2); }
+    89%       { opacity: 0;  transform: translateY(20px)  scaleY(1); }
+    100%      { opacity: 0; }
   }
 
   /* Wordmark */
@@ -200,7 +311,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .bg-aurora, .bg-grid, .ring, .glyph, .wordmark .dot { animation: none; }
+    .bg-aurora, .bg-grid, .ring, .glyph, .wordmark .dot,
+    .core-group, .core-group .flash, .core-group .tear, .heart, .halo { animation: none; }
   }
 </style>
 </head>
@@ -277,6 +389,17 @@
               <stop offset="40%" stop-color="#00e6c3"/>
               <stop offset="100%" stop-color="#0a4a40" stop-opacity=".0"/>
             </radialGradient>
+            <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#00e6c3" stop-opacity=".9"/>
+              <stop offset="30%"  stop-color="#00e6c3" stop-opacity=".45"/>
+              <stop offset="60%"  stop-color="#00e6c3" stop-opacity=".12"/>
+              <stop offset="100%" stop-color="#00e6c3" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#00e6c3" stop-opacity=".18"/>
+              <stop offset="45%"  stop-color="#00e6c3" stop-opacity=".06"/>
+              <stop offset="100%" stop-color="#00e6c3" stop-opacity="0"/>
+            </radialGradient>
 
             <!-- Recursive Sierpinski-like triangle pattern -->
             <symbol id="tri" viewBox="-50 -50 100 100">
@@ -290,6 +413,9 @@
                     fill="none" stroke="url(#g1)" stroke-width="1.1" opacity=".75"/>
             </symbol>
           </defs>
+
+          <!-- Ambient mandala aura (no filter = no square clipping) -->
+          <circle cx="100" cy="100" r="130" fill="url(#aura)"/>
 
           <!-- Six-petal mandala -->
           <g transform="translate(100 100)">
@@ -336,9 +462,21 @@
             <line x1="188" y1="100" x2="196" y2="100"/>
           </g>
 
-          <!-- Glowing core -->
-          <circle cx="100" cy="100" r="22" fill="url(#core)"/>
-          <circle cx="100" cy="100" r="6"  fill="#ffffff"/>
+          <!-- Glowing core (glitch pulse) -->
+          <g class="core-group">
+            <!-- Horizontal tear band that streaks during the glitch -->
+            <rect class="tear" x="78" y="98" width="44" height="4" fill="#ffffff" opacity=".9"/>
+            <!-- Halo flash -->
+            <circle class="flash" cx="100" cy="100" r="22" fill="none"
+                    stroke="#ffffff" stroke-width="1.2" opacity="0"/>
+            <!-- Heartbeat layer — the actual living core -->
+            <g class="heart">
+              <!-- Soft halo (real SVG, no filter clipping) -->
+              <circle class="halo" cx="100" cy="100" r="60" fill="url(#halo)"/>
+              <circle cx="100" cy="100" r="22" fill="url(#core)"/>
+              <circle cx="100" cy="100" r="6"  fill="#ffffff"/>
+            </g>
+          </g>
         </svg>
       </div>
 
